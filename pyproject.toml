@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zim-attendance"
+version = "0.1.0"
+description = "Async Python API/SDK for HikCentral Connect OpenAPI - Fast, scalable, and easy to use"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "httpx[http2]>=0.28.1",
+    "pydantic[email]>=2.12.5",
+    "orjson>=3.10.0",
+    "python-dotenv>=1.0.0",
+    "pillow>=11.0.0",
+    "fastapi>=0.128.0",
+    "uvicorn[standard]>=0.40.0",
+    "piccolo[all]>=1.30.0",
+    "piccolo-admin>=1.12.0",
+    "piccolo-api>=1.7.0",
+    "pydantic-settings>=2.12.0",
+    "loguru>=0.7.3",
+    "faststream[redis]>=0.6.5",
+]
+
+[tool.setuptools.packages.find]
+include = ["hikclient*", "core*", "apps*", "tests*"]
+exclude = ["docs*", "images*"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "black>=24.0.0",
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+]
+
+[project.scripts]
+main = "run_main:main"
+hik-poller = "run_poller:main"
+worker = "run_worker:main"

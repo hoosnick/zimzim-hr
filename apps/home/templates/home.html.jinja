@@ -1,0 +1,52 @@
+{% extends "base.html.jinja" %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>{{ title }}</h1>
+        <p>{{ subtitle }}</p>
+    </div>
+
+    <div class="content-wrapper">
+        <div class="cards-grid">
+            <!-- Web Application Card -->
+            <div class="card" data-url="{{ web_app_url }}" data-type="link">
+                <div class="card-icon">📦</div>
+                <h3>Web Ilova</h3>
+                <p>Xodimlar boshqaruvi uchun to'liq funksional veb-ilova.</p>
+                <a href="{{ web_app_url }}" target="_blank" class="card-link">Ochish</a>
+            </div>
+
+            <!-- API Documentation Card -->
+            <div class="card" data-url="{{ docs_url }}" data-type="link">
+                <div class="card-icon">📚</div>
+                <h3>API Qo'llanma</h3>
+                <p>Barcha API endpointlar, parametrlar va misollar bilan to'liq texnik hujjatlar.</p>
+                <a href="{{ docs_url }}" target="_blank" class="card-link">Hujjatlarni ko'rish</a>
+            </div>
+
+            <!-- Excel Add-in Card -->
+            <div class="card" data-url="{{ hcb_web_control_url }}" data-type="download">
+                <div class="card-icon">📊</div>
+                <h3>HCBWebControl Plugin</h3>
+                <p>Face ID qurilmasi to'g'ri ishlashi uchun maxsus plugin.</p>
+                <a href="{{ hcb_web_control_url }}" download class="card-link">Yuklab olish</a>
+            </div>
+        </div>
+
+        <div class="support-section">
+            <h2>Yordam va Qo'llab-quvvatlash</h2>
+            <p>Savol yoki muammo bo'lsa, biz bilan bog'laning.</p>
+            <a href="{{ dev_telegram }}" target="_blank" class="support-contact">
+                <span><i class='fab fa-telegram-plane'></i></span>
+                <span>Telegram orqali bog'lanish</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<script src="/static/script.js"></script>
+{% endblock content %}
+</div>
+</div>
+</div>

@@ -1,6 +1,6 @@
 from enum import Enum
 
-from piccolo.columns import JSONB, UUID, ForeignKey, Integer, Text, Timestamp, Varchar
+from piccolo.columns import JSONB, UUID, ForeignKey, Integer, Text, Timestamptz, Varchar
 from piccolo.columns.readable import Readable
 from piccolo.table import Table
 
@@ -8,8 +8,9 @@ from apps.utils.mixins import UpdatesMixin, end_date_default, start_date_default
 
 
 class Area(UpdatesMixin, Table):
-    area_id = Varchar(length=36, unique=True, null=False, index=True)
     name = Varchar(null=False)
+    area_id = Varchar(length=36, primary_key=True, null=False, index=True)
+    parent_area_id = Varchar(length=36, null=False, index=True)
 
     @classmethod
     def get_readable(cls):
@@ -24,7 +25,13 @@ class Device(UpdatesMixin, Table):
         accessControllerDevice = "accessControllerDevice"
         videoIntercomDevice = "videoIntercomDevice"
 
-    device_id = Varchar(length=36, unique=True, null=False, index=True)
+    device_id = Varchar(
+        length=36,
+        primary_key=True,
+        unique=True,
+        null=False,
+        index=True,
+    )
     name = Varchar(null=False)
     category = Varchar(
         length=22,
@@ -34,6 +41,11 @@ class Device(UpdatesMixin, Table):
         index=True,
     )
     serial_no = Varchar(length=64, unique=True, null=False, index=True)
+
+    verify_code = Varchar(length=64, null=True)
+    username = Varchar(length=64, null=True)
+    password = Varchar(length=64, null=True)
+
     area = ForeignKey(references=Area, null=True, index=True)
 
     @classmethod
@@ -44,13 +56,14 @@ class Device(UpdatesMixin, Table):
 class Group(UpdatesMixin, Table):
     group_id = Varchar(
         length=100,
+        primary_key=True,
         unique=True,
         null=False,
         index=True,
     )
     name = Varchar(length=100, null=False)
     description = Text(null=True)
-    area = ForeignKey(references=Area, null=True, index=True)
+    area = ForeignKey(references=Area, null=False, index=True)
 
     @classmethod
     def get_readable(cls):
@@ -61,12 +74,19 @@ class Group(UpdatesMixin, Table):
 
 
 class Person(UpdatesMixin, Table):
+    person_id = Varchar(
+        length=36,
+        primary_key=True,
+        unique=True,
+        null=False,
+        index=True,
+    )
     code = Varchar(length=16, unique=True, null=False, index=True)
     first_name = Varchar(null=False)
     last_name = Varchar(null=False)
 
-    start_date = Timestamp(default=start_date_default, null=False)
-    end_date = Timestamp(default=end_date_default, null=False)
+    start_date = Timestamptz(default=start_date_default, null=False)
+    end_date = Timestamptz(default=end_date_default, null=False)
 
     finger_data = Text(null=True)  # Base64 encoded fingerprint data
     card_no = Varchar(length=20, null=True, index=True)

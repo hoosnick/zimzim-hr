@@ -6,8 +6,16 @@ from .common import BaseModel
 class AreaFilter(BaseModel):
     """Area filter model"""
 
-    includeSubArea: str | None = Field(None, max_length=64)
-    parent_id: str | None = Field(None, alias="parentAreaID", max_length=32)
+    parentAreaID: str | None = Field(
+        None,
+        description="Parent area ID to get corresponding child area list. Empty or '-1' includes all areas",
+        max_length=32,
+    )
+    includeSubArea: str | None = Field(
+        None,
+        description="Whether to get child areas: 0 (only parent area), -1 (all child areas under parent), 1 (only direct child areas under parent)",
+        max_length=2,
+    )
 
 
 class BriefArea(BaseModel):

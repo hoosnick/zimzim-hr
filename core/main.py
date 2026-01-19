@@ -4,6 +4,7 @@ from fastapi import Depends, FastAPI
 from fastapi.security.api_key import APIKeyHeader
 from loguru import logger
 from piccolo_api.crud.endpoints import PiccoloCRUD, Validators
+from piccolo_api.crud.hooks import Hook, HookType
 from piccolo_api.fastapi.endpoints import FastAPIKwargs, FastAPIWrapper
 from piccolo_api.token_auth.middleware import PiccoloTokenAuthProvider, TokenAuthBackend
 from starlette.middleware.authentication import AuthenticationMiddleware
@@ -13,8 +14,9 @@ from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
 from apps.home.endpoints import HomeEndpoint
+from apps.hr.hooks import area_hook, device_hook, group_hook, person_hook
 from apps.hr.tables import Area, Device, Group, Person
-from apps.utils.hooks import handle_auth_exception, validator_superuser
+from apps.utils.hooks import handle_auth_exception, put_not_allowed, validator_superuser
 from apps.utils.logger import setup_logger
 from core.config import settings as config
 from core.db import admin_panel, create_user, database_connection
@@ -70,12 +72,13 @@ protected_app = AuthenticationMiddleware(
 )
 
 VALIDATORS = Validators(
-    put_single=[validator_superuser],
+    put_single=[validator_superuser, put_not_allowed],
     patch_single=[validator_superuser],
     delete_single=[validator_superuser],
     post_single=[validator_superuser],
     delete_all=[validator_superuser],
 )
+
 
 FastAPIWrapper(
     root_url=config.API_V1_STR + "/areas/",
@@ -84,6 +87,11 @@ FastAPIWrapper(
         table=Area,
         read_only=False,
         validators=VALIDATORS,
+        hooks=[
+            Hook(hook_type=HookType.pre_save, callable=area_hook.pre_save),
+            Hook(hook_type=HookType.pre_patch, callable=area_hook.pre_patch),
+            Hook(hook_type=HookType.pre_delete, callable=area_hook.pre_delete),
+        ],
     ),
     fastapi_kwargs=FastAPIKwargs(
         all_routes={"tags": ["Areas"]},
@@ -98,6 +106,11 @@ FastAPIWrapper(
         read_only=False,
         max_joins=1,
         validators=VALIDATORS,
+        hooks=[
+            Hook(hook_type=HookType.pre_save, callable=device_hook.pre_save),
+            Hook(hook_type=HookType.pre_patch, callable=device_hook.pre_patch),
+            Hook(hook_type=HookType.pre_delete, callable=device_hook.pre_delete),
+        ],
     ),
     fastapi_kwargs=FastAPIKwargs(
         all_routes={"tags": ["Devices"]},
@@ -112,6 +125,11 @@ FastAPIWrapper(
         read_only=False,
         max_joins=1,
         validators=VALIDATORS,
+        hooks=[
+            Hook(hook_type=HookType.pre_save, callable=group_hook.pre_save),
+            Hook(hook_type=HookType.pre_patch, callable=group_hook.pre_patch),
+            Hook(hook_type=HookType.pre_delete, callable=group_hook.pre_delete),
+        ],
     ),
     fastapi_kwargs=FastAPIKwargs(
         all_routes={"tags": ["Groups"]},
@@ -126,6 +144,11 @@ FastAPIWrapper(
         read_only=False,
         max_joins=1,
         validators=VALIDATORS,
+        hooks=[
+            Hook(hook_type=HookType.pre_save, callable=person_hook.pre_save),
+            Hook(hook_type=HookType.pre_patch, callable=person_hook.pre_patch),
+            Hook(hook_type=HookType.pre_delete, callable=person_hook.pre_delete),
+        ],
     ),
     fastapi_kwargs=FastAPIKwargs(
         all_routes={"tags": ["Persons"]},

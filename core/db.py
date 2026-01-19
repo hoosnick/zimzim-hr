@@ -9,28 +9,35 @@ from piccolo_api.token_auth.tables import TokenAuth
 from apps.hr.tables import Area, Device, Group, Message, Person
 from core.config import settings
 
+ORDER_BY = [OrderBy(column=Message.created_at, ascending=False)]
+MENU_GROUPS = {
+    "Hikvision": "Hikvision Integration",
+    "Events": "Event Logs",
+}
+
+
 area_table_config = TableConfig(
     table_class=Area,
     link_column=Area.area_id,
-    exclude_visible_columns=[Area.id, Area.updated_at, Area.created_at],
-    order_by=[OrderBy(column=Area.created_at, ascending=False)],
-    menu_group="Hikvision",
+    exclude_visible_columns=[Area.updated_at, Area.created_at],
+    order_by=ORDER_BY,
+    menu_group=MENU_GROUPS["Hikvision"],
 )
 
 device_table_config = TableConfig(
     table_class=Device,
     link_column=Device.device_id,
-    exclude_visible_columns=[Device.id, Device.updated_at, Device.created_at],
-    order_by=[OrderBy(column=Device.created_at, ascending=False)],
-    menu_group="Hikvision",
+    exclude_visible_columns=[Device.updated_at, Device.created_at],
+    order_by=ORDER_BY,
+    menu_group=MENU_GROUPS["Hikvision"],
 )
 
 group_table_config = TableConfig(
     table_class=Group,
     link_column=Group.group_id,
-    exclude_visible_columns=[Group.id, Group.updated_at, Group.created_at],
-    order_by=[OrderBy(column=Group.created_at, ascending=False)],
-    menu_group="Hikvision",
+    exclude_visible_columns=[Group.updated_at, Group.created_at],
+    order_by=ORDER_BY,
+    menu_group=MENU_GROUPS["Hikvision"],
 )
 
 message_table_config = TableConfig(
@@ -42,15 +49,14 @@ message_table_config = TableConfig(
         Message.updated_at,
         Message.created_at,
     ],
-    order_by=[OrderBy(column=Message.created_at, ascending=False)],
-    menu_group="Events",
+    order_by=ORDER_BY,
+    menu_group=MENU_GROUPS["Events"],
 )
 
 person_table_config = TableConfig(
     table_class=Person,
-    link_column=Person.code,
+    link_column=Person.person_id,
     exclude_visible_columns=[
-        Person.id,
         Person.updated_at,
         Person.created_at,
         Person.finger_data,
@@ -58,8 +64,8 @@ person_table_config = TableConfig(
         Person.pin_code,
         Person.face_data,
     ],
-    order_by=[OrderBy(column=Person.created_at, ascending=False)],
-    menu_group="Hikvision",
+    order_by=ORDER_BY,
+    menu_group=MENU_GROUPS["Hikvision"],
 )
 
 admin_panel = create_admin(

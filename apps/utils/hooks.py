@@ -13,6 +13,13 @@ def validator_superuser(piccolo_crud: PiccoloCRUD, request: Request):
         )
 
 
+def put_not_allowed(piccolo_crud: PiccoloCRUD, request: Request):
+    raise HTTPException(
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+        detail="PUT method is not allowed for this endpoint",
+    )
+
+
 def handle_auth_exception(request: Request, exc: Exception):
     logger.debug("Authentication error: %s | %s" % (request.url, exc))
     return JSONResponse(

@@ -1,11 +1,13 @@
 import datetime
 
-from piccolo.columns.column_types import Timestamp
+from piccolo.columns.column_types import Timestamptz
 
 
 class UpdatesMixin:
-    created_at = Timestamp()
-    updated_at = Timestamp(auto_update=datetime.datetime.now)
+    created_at = Timestamptz()
+    updated_at = Timestamptz(
+        auto_update=lambda: datetime.datetime.now(datetime.timezone.utc)
+    )
 
 
 def start_date_default():

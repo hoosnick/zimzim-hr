@@ -62,7 +62,7 @@ class HikClient:
         self.timeout = httpx.Timeout(timeout, connect=connect_timeout)
         self.max_retries = max_retries
 
-        self._client: httpx.AsyncClient | None = None
+        self._client: Optional[httpx.AsyncClient] = None
 
         self._token: Optional[str] = self.token_data.get("access_token")
         self._token_expire_time: Optional[int] = self.token_data.get(
@@ -72,7 +72,7 @@ class HikClient:
 
         # Polling state
         self._polling_active = False
-        self._stop_signal: asyncio.Event | None = None
+        self._stop_signal: Optional[asyncio.Event] = None
         self._message_tasks: set[asyncio.Task[Any]] = set()
 
     async def __aenter__(self) -> "HikClient":
@@ -173,8 +173,8 @@ class HikClient:
         self,
         method: str,
         endpoint: str,
-        data: dict[str, Any] | None = None,
-        params: dict[str, Any] | None = None,
+        data: Optional[list[dict[str, Any]]] = None,
+        params: Optional[dict[str, Any]] = None,
     ) -> dict[str, Any]:
         if self._client is None:
             raise RuntimeError("Client not opened. Use 'async with' or call open()")
@@ -260,7 +260,7 @@ class HikClient:
         self,
         device_info: DeviceInfo,
         timezone: TimeZone,
-        import_to_area: ImportToArea | None = None,
+        import_to_area: Optional[ImportToArea] = None,
         device_category: str = "accessControllerDevice",
     ) -> AddDeviceResponse:
         """
@@ -301,7 +301,7 @@ class HikClient:
             timezone: TimeZone object (optional)
         """
         data: dict[str, Any] = {
-            "deviceInfo": device_info.model_dump(by_alias=True),
+            "deviceInfo": device_info.model_dump(by_alias=True, exclude_none=True),
         }
         if timezone:
             data["timeZone"] = timezone.model_dump(by_alias=True)
@@ -485,7 +485,7 @@ class HikClient:
         self,
         page_index: int = 1,
         page_size: int = 500,
-        filter: AreaFilter | None = None,
+        filter: Optional[AreaFilter] = None,
     ) -> list[BriefArea]:
         """
         Get area list
@@ -671,7 +671,7 @@ class HikClient:
         self,
         page_index: int = 1,
         page_size: int = 20,
-        name_filter: str | None = None,
+        name_filter: Optional[str] = None,
     ) -> list[Person]:
         """
         Search for persons
@@ -828,7 +828,7 @@ class HikClient:
         ),
         interval: float = 0.5,
         auto_confirm: bool = True,
-        subscribe_msg_types: list[str] | None = None,
+        subscribe_msg_types: Optional[list[str]] = None,
     ) -> None:
         """
         Start polling for messages in the background

@@ -43,7 +43,7 @@ message_table_config = TableConfig(
         Message.created_at,
     ],
     order_by=[OrderBy(column=Message.created_at, ascending=False)],
-    menu_group="Hikvision",
+    menu_group="Events",
 )
 
 person_table_config = TableConfig(

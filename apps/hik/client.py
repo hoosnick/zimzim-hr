@@ -5,6 +5,17 @@ import httpx
 from loguru import logger
 from pydantic import ValidationError
 
+from apps.hik.models.area import AreaFilter, BriefArea
+from apps.hik.models.device import (
+    AddDeviceResponse,
+    CapturedPic,
+    DeviceInfo,
+    DeviceInfo2,
+    GetDeviceInfo,
+    GetDevicesResVo,
+    ImportToArea,
+    TimeZone,
+)
 from core.config import settings
 
 from .exceptions import APIError, AuthenticationError, NetworkError
@@ -245,12 +256,298 @@ class HikClient:
 
     # ========== Device Management APIs ==========
 
+    async def add_device(
+        self,
+        device_info: DeviceInfo,
+        timezone: TimeZone,
+        import_to_area: ImportToArea | None = None,
+        device_category: str = "accessControllerDevice",
+    ) -> AddDeviceResponse:
+        """
+        Add a new device
+        Args:
+            device_info: DeviceInfo object with device details
+            timezone: TimeZone object
+            import_to_area: ImportToArea object (optional)
+            device_category: Device category (default: "accessControllerDevice")
+        Returns:
+            Device ID of the created device
+        """
+        data: dict[str, Any] = {
+            "deviceInfo": device_info.model_dump(by_alias=True),
+            "timeZone": timezone.model_dump(by_alias=True),
+            "deviceCategory": device_category,
+        }
+        if import_to_area:
+            data["importToArea"] = import_to_area.model_dump(by_alias=True)
+
+        result = await self._request(
+            "POST",
+            "/api/hccgw/resource/v1/devices/add",
+            data=data,
+        )
+
+        return AddDeviceResponse(**result["data"]["addDeviceResponse"])
+
+    async def update_device(
+        self,
+        device_info: DeviceInfo2,
+        timezone: Optional[TimeZone] = None,
+    ) -> None:
+        """
+        Update device information
+        Args:
+            device_info: DeviceInfo2 object with updated device details
+            timezone: TimeZone object (optional)
+        """
+        data: dict[str, Any] = {
+            "deviceInfo": device_info.model_dump(by_alias=True),
+        }
+        if timezone:
+            data["timeZone"] = timezone.model_dump(by_alias=True)
+
+        await self._request(
+            "POST",
+            "/api/hccgw/resource/v1/devices/update",
+            data=data,
+        )
+
+    async def delete_device(
+        self,
+        device_ids: list[str],
+        device_category: str = "accessControllerDevice",
+    ) -> None:
+        """
+        Delete a device
+        Args:
+            device_ids: List of device IDs to delete
+            device_category: Device category
+        """
+        data = {
+            "deviceID": device_ids,
+            "deviceCategory": device_category,
+        }
+
+        await self._request(
+            "POST",
+            "/api/hccgw/resource/v1/devices/delete",
+            data=data,
+        )
+
+    async def get_device_list(
+        self,
+        page_index: int = 1,
+        page_size: int = 20,
+        area_id: Optional[str] = None,
+        device_category: Optional[str] = None,
+        match_key: Optional[str] = None,
+        job_number: Optional[str] = None,
+    ) -> GetDevicesResVo:
+        """
+        Get device list
+
+        Args:
+            page_index: Current page (starting from 1)
+            page_size: Number of records per page (1-500)
+            area_id: Area ID (optional)
+            device_category: Device category (optional)
+            match_key: Fuzzy search for device name, serial No., version (optional)
+            job_number: Work order No. (optional, max length 128)
+
+        Returns:
+            List of device information dictionaries
+        """
+        data: dict[str, Any] = {
+            "pageIndex": page_index,
+            "pageSize": page_size,
+        }
+
+        if area_id:
+            data["areaId"] = area_id
+        if device_category:
+            data["deviceCategory"] = device_category
+
+        filter_obj: dict[str, str] = {}
+        if match_key:
+            filter_obj["matchKey"] = match_key
+        if job_number:
+            filter_obj["jobNumber"] = job_number
+
+        if filter_obj:
+            data["filter"] = filter_obj
+
+        result = await self._request(
+            "POST",
+            "/api/hccgw/resource/v1/devices/get",
+            data=data,
+        )
+
+        return GetDevicesResVo(**result.get("data", {}))
+
+    async def device_detail(
+        self,
+        serial_no: str,
+    ) -> GetDeviceInfo:
+        """
+        Get device detail by serial number
+        Args:
+            serial_no: Device serial number
+        Returns:
+            Device detail GetDeviceInfo object
+        """
+        data = {
+            "deviceSerialNo": serial_no,
+        }
+
+        result = await self._request(
+            "POST",
+            "/api/hccgw/resource/v1/devicedetail/get",
+            data=data,
+        )
+
+        return GetDeviceInfo(**result.get("data", {}))
+
+    async def capture_picture(
+        self,
+        serial_no: str,
+        channel_no: int,
+    ) -> CapturedPic:
+        """
+        Capture picture from device
+
+        Args:
+            serial_no: Device serial number
+            channel_no: Camera channel number
+        Returns:
+            CapturedPic object with picture information
+        """
+        data = {
+            "deviceSerial": serial_no,
+            "channelNo": channel_no,
+        }
+
+        result = await self._request(
+            "POST",
+            "/api/hccgw/resource/v1/devices/capture",
+            data=data,
+        )
+
+        return CapturedPic(**result.get("data", {}))
+
+    async def refresh_device(self, device_id: str) -> dict[str, Any]:
+        """
+        Synchronously refresh device status.
+
+        Args:
+            device_id: Device ID
+
+        Returns:
+            Dictionary containing device ID and status (or error code if failed)
+        """
+        result = await self._request(
+            "POST",
+            f"/api/hccgw/resource/v1/device/{device_id}/refresh",
+        )
+
+        return result.get("data", {})
+
+    # ========== Area Management APIs ============
+
+    async def add_area(
+        self,
+        area_name: str,
+        parent_area_id: str = "-1",
+    ) -> str:
+        """
+        Add a new area (location)
+
+        Args:
+            area_name: Name of the area
+            parent_area_id: Parent area ID (default: "-1" for root)
+
+        Returns:
+            Area ID of the created area
+        """
+        data = {
+            "areaName": area_name,
+            "parentAreaID": parent_area_id,
+        }
+
+        result = await self._request(
+            "POST",
+            "/api/hccgw/resource/v1/areas/add",
+            data=data,
+        )
+
+        return result["data"]["areaID"]
+
+    async def get_area(
+        self,
+        page_index: int = 1,
+        page_size: int = 500,
+        filter: AreaFilter | None = None,
+    ) -> list[BriefArea]:
+        """
+        Get area list
+
+        Args:
+            page_index: Current page (starting from 1)
+            page_size: Number of records per page (1-500)
+            filter: AreaFilter object for filtering (optional)
+
+        Returns:
+            List of BriefArea objects
+        """
+        data: dict[str, Any] = {
+            "pageIndex": page_index,
+            "pageSize": page_size,
+        }
+
+        if filter:
+            data["filter"] = filter.model_dump(by_alias=True, exclude_none=True)
+
+        result = await self._request(
+            "POST",
+            "/api/hccgw/resource/v1/areas/get",
+            data=data,
+        )
+
+        area_list = result.get("data", {}).get("area", [])
+        return [BriefArea(**area) for area in area_list]
+
+    async def get_area_detail(
+        self,
+        area_ids: list[str],
+    ) -> list[BriefArea]:
+        """
+        Get area information by specifying area IDs
+
+        Args:
+            area_ids: List of area IDs to retrieve
+
+        Returns:
+            List of BriefArea objects
+        """
+        data = {
+            "areaID": area_ids,
+        }
+
+        result = await self._request(
+            "POST",
+            "/api/hccgw/resource/v1/areadetail/get",
+            data=data,
+        )
+
+        area_list = result.get("data", {}).get("area", [])
+        return [BriefArea(**area) for area in area_list]
+
     # ========== Person Management APIs ==========
 
     async def add_person_group(
         self,
         group_name: str,
         description: Optional[str] = None,
+        area_id: Optional[str] = None,
     ) -> str:
         """
         Add a new person group (department)
@@ -258,7 +555,7 @@ class HikClient:
         Args:
             group_name: Name of the person group
             description: Description of the group (optional)
-
+            area_id: Area ID (optional)
         Returns:
             Group ID of the created person group
         """
@@ -268,6 +565,9 @@ class HikClient:
         if description:
             data["description"] = description
 
+        if area_id:
+            data["areaId"] = area_id
+
         result = await self._request(
             "POST",
             "/api/hccgw/person/v1/groups/add",
@@ -276,10 +576,63 @@ class HikClient:
 
         return result["data"]["groupId"]
 
+    async def update_person_group(
+        self,
+        group_id: str,
+        group_name: Optional[str] = None,
+        description: Optional[str] = None,
+        parent_id: Optional[str] = None,
+        area_id: Optional[str] = None,
+    ) -> None:
+        """
+        Update a person group (department)
+
+        Args:
+            group_id: Group ID to update
+            group_name: New group name (optional)
+            description: New description (optional)
+            parent_id: New parent group ID (optional)
+            area_id: Area ID (optional)
+        """
+        data: dict[str, Any] = {
+            "groupId": group_id,
+        }
+        if group_name:
+            data["groupName"] = group_name
+        if description:
+            data["description"] = description
+        if parent_id:
+            data["parentGroupId"] = parent_id
+        if area_id:
+            data["areaId"] = area_id
+
+        await self._request(
+            "POST",
+            "/api/hccgw/person/v1/groups/update",
+            data=data,
+        )
+
+    async def delete_person_group(
+        self,
+        group_id: str,
+    ) -> None:
+        """
+        Delete a person group (department)
+        Args:
+            group_id: Group ID to delete
+        """
+        await self._request(
+            "POST",
+            "/api/hccgw/person/v1/groups/delete",
+            data={"groupId": group_id},
+        )
+
     async def get_person_groups(
         self,
         parent_group_id: str = "",
         group_name: str = "",
+        depth_traversal: bool = False,
+        group_ids: Optional[list[str]] = None,
     ) -> list[PersonGroup]:
         """
         Get person groups (departments)
@@ -287,6 +640,8 @@ class HikClient:
         Args:
             parent_group_id: Parent group ID (optional)
             group_name: Group name for fuzzy search (optional)
+            depth_traversal: Whether to perform depth traversal (default: False)
+            group_ids: List of specific group IDs to retrieve (optional)
 
         Returns:
             List of PersonGroup objects
@@ -294,6 +649,12 @@ class HikClient:
         data = {}
         data["parentGroupId"] = parent_group_id
         data["groupName"] = group_name
+
+        if depth_traversal:
+            data["depthTraversal"] = True
+
+        if group_ids:
+            data["groupIdList"] = group_ids
 
         result = await self._request(
             "POST",

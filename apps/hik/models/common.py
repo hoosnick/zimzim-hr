@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import Generic, TypeVar
 
 from pydantic import BaseModel as PydanticBaseModel
@@ -36,22 +35,3 @@ class PaginatedResponse(BaseResponse, Generic[T]):
     page_index: int = Field(..., alias="pageIndex")
     page_size: int = Field(..., alias="pageSize")
     data: list[T] = Field(default_factory=list)
-
-
-class TimeRange(BaseModel):
-    """Time range for filtering requests"""
-
-    begin_time: datetime = Field(..., alias="beginTime")
-    end_time: datetime = Field(..., alias="endTime")
-
-    model_config = ConfigDict(
-        extra="allow",
-        populate_by_name=True,
-        json_encoders={
-            datetime: lambda v: (
-                v.strftime("%Y-%m-%dT%H:%M:%S%z")
-                if v.tzinfo
-                else v.strftime("%Y-%m-%dT%H:%M:%S+08:00")
-            )
-        },
-    )

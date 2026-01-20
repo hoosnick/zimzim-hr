@@ -56,6 +56,24 @@ class PersonCard(BaseModel):
     card_no: str = Field(..., alias="cardNo", max_length=20)
 
 
+class PersonCardUpdate(BaseModel):
+    """Person card update model for API request"""
+
+    id: str | None = None  # If not provided, adds card; if provided, edits
+    card_no: str = Field(
+        ..., alias="cardNo", max_length=20
+    )  # Card number, cannot be duplicated
+
+
+class PersonCardsUpdate(BaseModel):
+    """Person cards update request model"""
+
+    person_id: str = Field(..., alias="personId")
+    card_list: list[PersonCardUpdate] | None = Field(
+        None, alias="cardList"
+    )  # If None or empty, deletes all cards
+
+
 class PersonFingerprint(BaseModel):
     """Person fingerprint model"""
 
@@ -64,8 +82,76 @@ class PersonFingerprint(BaseModel):
     data: str = Field(..., max_length=1024)
 
 
+class PersonFingerprintUpdate(BaseModel):
+    """Person fingerprint update model for API request"""
+
+    id: str | None = None  # If not provided, adds fingerprint; if provided, edits
+    name: str = Field(..., max_length=32)  # Which finger the fingerprint belongs to
+    data: str = Field(..., max_length=1024)  # Hex data
+
+
+class PersonFingersUpdate(BaseModel):
+    """Person fingerprints update request model"""
+
+    person_id: str = Field(..., alias="personId")
+    finger_list: list[PersonFingerprintUpdate] | None = Field(
+        None, alias="fingerList"
+    )  # If None or empty, deletes all fingerprints
+
+
 class PersonPinCode(BaseModel):
     """Person PIN code update model"""
 
     person_id: str = Field(..., alias="personId")
     pin_code: str = Field(..., alias="pinCode", min_length=4, max_length=8)
+
+
+# Response models for update operations
+
+
+class FingerFailedItem(BaseModel):
+    """Failed fingerprint item in update response"""
+
+    id: str
+    failed_name: str = Field(..., alias="failedName")
+    error_code: str = Field(..., alias="errorCode")
+
+
+class FingerFailed(BaseModel):
+    """Fingerprint update failure information"""
+
+    person_id: str = Field(..., alias="personId")
+    person_name: str = Field(..., alias="personName")
+    error_code: str = Field(..., alias="errorCode")
+    finger_list: list[FingerFailedItem] = Field(
+        default_factory=list, alias="fingerList"
+    )
+
+
+class PersonFingersUpdateResponse(BaseModel):
+    """Response model for update person fingers"""
+
+    finger_failed: FingerFailed | None = Field(None, alias="fingerFailed")
+
+
+class CardFailedItem(BaseModel):
+    """Failed card item in update response"""
+
+    card_id: str = Field(..., alias="cardId")
+    card_no: str = Field(..., alias="cardNo")
+    error_code: str = Field(..., alias="errorCode")
+
+
+class CardFailed(BaseModel):
+    """Card update failure information"""
+
+    person_id: str = Field(..., alias="personId")
+    person_name: str = Field(..., alias="personName")
+    error_code: str = Field(..., alias="errorCode")
+    card_list: list[CardFailedItem] = Field(default_factory=list, alias="cardList")
+
+
+class PersonCardsUpdateResponse(BaseModel):
+    """Response model for update person cards"""
+
+    card_failed: CardFailed | None = Field(None, alias="cardFailed")

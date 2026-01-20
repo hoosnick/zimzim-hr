@@ -61,6 +61,7 @@ class Group(UpdatesMixin, Table):
         null=False,
         index=True,
     )
+    parent_group_id = Varchar(length=100, null=True, index=True)
     name = Varchar(length=100, null=False)
     description = Text(null=True)
     area = ForeignKey(references=Area, null=False, index=True)

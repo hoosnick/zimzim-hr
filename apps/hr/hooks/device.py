@@ -98,7 +98,7 @@ class DeviceHook(BaseHikHook):
 
             # Prepare device info for update
             device_info = DeviceInfo2(
-                id=current_device.device_id,
+                id=row_id,
                 name=values.get("name"),
                 username=values.get("username"),
                 password=values.get("password"),

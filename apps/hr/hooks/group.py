@@ -22,10 +22,8 @@ class GroupHook(BaseHikHook):
             client = await self._get_client()
 
             # Get area_id if area is set
-            area_id = None
-            if row.area:
-                area_obj = await row.area.get_related()
-                area_id = area_obj.area_id if area_obj else None
+            area_id = row.area
+            row.parent_group_id = None
 
             # Call HikVision API to create person group
             group_id = await client.add_person_group(
@@ -64,36 +62,20 @@ class GroupHook(BaseHikHook):
             Updated values dictionary
         """
         try:
-            # Fetch current group from database to get group_id
-            current_group = await Group.objects().get(Group.id == row_id)
-
-            if current_group is None:
-                raise HTTPException(
-                    status_code=404, detail="Group with id %s not found" % row_id
-                )
-
             client = await self._get_client()
-
-            # Get area_id if area is being updated
-            area_id = None
-            if "area" in values and values["area"]:
-                # Get the area object to fetch area_id
-                from apps.hr.tables import Area
-
-                area_obj = await Area.objects().get(Area.id == values["area"])
-                area_id = area_obj.area_id if area_obj else None
 
             # Call HikVision API to update person group
             await client.update_person_group(
-                group_id=current_group.group_id,
+                group_id=row_id,
                 group_name=values.get("name"),
                 description=values.get("description"),
-                area_id=area_id,
+                parent_id=values.get("parent_group_id"),
+                area_id=values.get("area"),
             )
 
             logger.info(
                 "Updated person group in HikVision: %s - %s"
-                % (current_group.group_id, values.get("name", current_group.name))
+                % (row_id, values.get("name"))
             )
 
             return values
@@ -116,22 +98,13 @@ class GroupHook(BaseHikHook):
         """
         try:
             # Fetch group from database to get group_id
-            group = await Group.objects().get(Group.id == row_id)
-
-            if group is None:
-                raise HTTPException(
-                    status_code=404, detail="Group with id %s not found" % row_id
-                )
 
             client = await self._get_client()
 
             # Call HikVision API to delete person group
-            await client.delete_person_group(group_id=group.group_id)
+            await client.delete_person_group(group_id=row_id)
 
-            logger.info(
-                "Deleted person group from HikVision: %s - %s"
-                % (group.group_id, group.name)
-            )
+            logger.info("Deleted person group from HikVision: %s" % row_id)
 
         except Exception as e:
             logger.error("Failed to delete person group from HikVision: %s" % str(e))

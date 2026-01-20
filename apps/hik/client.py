@@ -23,6 +23,12 @@ from .models.auth import TokenRequest, TokenResponse
 from .models.message import MessageBatch, MessageSubscription
 from .models.person import (
     Person,
+    PersonCardsUpdate,
+    PersonCardsUpdateResponse,
+    PersonCardUpdate,
+    PersonFingerprintUpdate,
+    PersonFingersUpdate,
+    PersonFingersUpdateResponse,
     PersonGroup,
     PersonPhoto,
     PersonPinCode,
@@ -750,6 +756,63 @@ class HikClient:
             "/api/hccgw/person/v1/persons/updatepincode",
             data=pincode.model_dump(by_alias=True),
         )
+
+    async def update_person_fingers(
+        self,
+        person_id: str,
+        finger_list: list[PersonFingerprintUpdate] | None = None,
+    ) -> PersonFingersUpdateResponse:
+        """
+        Update person's fingerprints
+
+        Args:
+            person_id: Person ID
+            finger_list: List of fingerprints to update. If None or empty, all fingerprints will be deleted.
+                        Up to 2 fingerprints can be configured per person.
+                        If id is provided, it edits the fingerprint; if not, it adds a new one.
+
+        Returns:
+            PersonFingersUpdateResponse containing fingerFailed data if any fingerprints failed to update
+        """
+        fingers_update = PersonFingersUpdate(
+            person_id=person_id, finger_list=finger_list
+        )
+
+        result = await self._request(
+            "POST",
+            "/api/hccgw/person/v1/persons/updatefingers",
+            data=fingers_update.model_dump(by_alias=True, exclude_none=True),
+        )
+
+        return PersonFingersUpdateResponse(**result.get("data", {}))
+
+    async def update_person_cards(
+        self,
+        person_id: str,
+        card_list: list[PersonCardUpdate] | None = None,
+    ) -> PersonCardsUpdateResponse:
+        """
+        Update person's cards
+
+        Args:
+            person_id: Person ID
+            card_list: List of cards to update. If None or empty, all cards will be deleted.
+                      Up to 2 cards can be configured per person.
+                      If id is provided, it edits the card; if not, it adds a new one.
+                      Card numbers cannot be duplicated.
+
+        Returns:
+            PersonCardsUpdateResponse containing cardFailed data if any cards failed to update
+        """
+        cards_update = PersonCardsUpdate(person_id=person_id, card_list=card_list)
+
+        result = await self._request(
+            "POST",
+            "/api/hccgw/person/v1/persons/updatecards",
+            data=cards_update.model_dump(by_alias=True, exclude_none=True),
+        )
+
+        return PersonCardsUpdateResponse(**result.get("data", {}))
 
     async def delete_person(self, person_id: str) -> None:
         """

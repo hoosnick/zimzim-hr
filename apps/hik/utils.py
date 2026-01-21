@@ -8,18 +8,20 @@ import orjson
 from PIL import Image
 
 
-def is_token_expired(expire_time: int) -> bool:
+def is_token_expired(expire_time: int, margin_seconds: int = 300) -> bool:
     """
     Check if token is expired or about to expire
 
     Args:
         expire_time: Token expiration timestamp
+        margin_seconds: Safety margin in seconds (default: 5 minutes)
 
     Returns:
         True if token is expired or about to expire within margin
     """
     current_time = int(time.time())
-    return current_time >= expire_time
+    # Add safety margin to prevent mid-request token expiry
+    return current_time >= (expire_time - margin_seconds)
 
 
 def serialize_json(data: Any) -> bytes:

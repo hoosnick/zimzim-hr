@@ -40,8 +40,6 @@ class AreaHook(BaseHikHook):
                 status_code=500,
                 detail="Failed to create area in HikVision: %s" % str(e),
             )
-        finally:
-            await self._close_client()
 
     async def pre_patch(self, row_id: str, values: dict) -> dict:
         """

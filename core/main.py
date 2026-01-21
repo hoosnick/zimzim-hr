@@ -7,12 +7,14 @@ from piccolo_api.crud.endpoints import PiccoloCRUD, Validators
 from piccolo_api.crud.hooks import Hook, HookType
 from piccolo_api.fastapi.endpoints import FastAPIKwargs, FastAPIWrapper
 from piccolo_api.token_auth.middleware import PiccoloTokenAuthProvider, TokenAuthBackend
+from redis.asyncio import Redis
 from starlette.middleware.authentication import AuthenticationMiddleware
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import RedirectResponse
 from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
+from apps.hik.client_manager import get_hik_client_manager
 from apps.home.endpoints import HomeEndpoint
 from apps.hr.endpoints import router as api_router
 from apps.hr.hooks import area_hook, device_hook, group_hook, person_hook
@@ -27,14 +29,32 @@ setup_logger()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Initialize database
     await database_connection()
-
     await create_user(config.LOGIN, config.PASSWORD)
+
+    # Initialize Redis connection
+    redis_client = Redis.from_url(
+        config.REDIS_URL,
+        encoding="utf-8",
+        decode_responses=False,  # We handle decoding in TokenManager
+    )
+
+    # Initialize HikClient Manager with Redis
+    client_manager = await get_hik_client_manager()
+    await client_manager.initialize(redis_client)
 
     logger.info("Application startup complete")
 
     yield
 
+    # Shutdown HikClient Manager
+    await client_manager.shutdown()
+
+    # Close Redis connection
+    await redis_client.aclose()
+
+    # Close database
     await database_connection(close=True)
 
     logger.info("Application shutdown complete")

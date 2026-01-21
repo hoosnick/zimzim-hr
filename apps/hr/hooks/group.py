@@ -47,8 +47,6 @@ class GroupHook(BaseHikHook):
                 status_code=500,
                 detail="Failed to create person group in HikVision: %s" % str(e),
             )
-        finally:
-            await self._close_client()
 
     async def pre_patch(self, row_id: str, values: dict) -> dict:
         """
@@ -86,8 +84,6 @@ class GroupHook(BaseHikHook):
                 status_code=500,
                 detail="Failed to update person group in HikVision: %s" % str(e),
             )
-        finally:
-            await self._close_client()
 
     async def pre_delete(self, row_id: str) -> None:
         """
@@ -112,8 +108,6 @@ class GroupHook(BaseHikHook):
                 status_code=500,
                 detail="Failed to delete person group from HikVision: %s" % str(e),
             )
-        finally:
-            await self._close_client()
 
 
 # Create singleton instance

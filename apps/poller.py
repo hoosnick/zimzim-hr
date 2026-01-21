@@ -2,8 +2,9 @@ import asyncio
 import uuid
 
 from loguru import logger
+from redis.asyncio import Redis
 
-from apps.hik.client import HikClient
+from apps.hik.client_manager import get_hik_client_manager
 from apps.hik.models.message import MessageBatch
 from apps.hr.tables import Message
 from core.broker import broker
@@ -33,31 +34,47 @@ async def handle_event(batch: MessageBatch) -> None:
 
 
 async def main():
+    # Initialize database
     await database_connection()
+
+    # Initialize broker
     await broker.connect()
 
-    async with HikClient(
-        app_key=settings.HIK.APP_KEY,
-        secret_key=settings.HIK.SECRET_KEY,
-    ) as client:
-        logger.info("Starting event polling...")
+    # Initialize Redis for token caching
+    redis_client = Redis.from_url(
+        settings.REDIS_URL,
+        encoding="utf-8",
+        decode_responses=False,
+    )
 
-        await client.start_polling(
-            callback=handle_event,
-            interval=0.5,
-            auto_confirm=True,
-        )
+    # Initialize HikClient Manager (shares tokens with API server)
+    manager = await get_hik_client_manager()
+    await manager.initialize(redis_client)
 
-        logger.info("Polling active, waiting for events...")
+    # Get shared client instance
+    client = await manager.get_client()
 
-        try:
-            await asyncio.Event().wait()
-        except asyncio.CancelledError:
-            logger.info("Poller cancelled")
-        finally:
-            await client.stop_polling()
-            await broker.stop()
-            await database_connection(close=True)
+    logger.info("Starting event polling...")
+
+    await client.start_polling(
+        callback=handle_event,
+        interval=0.5,
+        auto_confirm=True,
+    )
+
+    logger.info("Polling active, waiting for events...")
+
+    try:
+        await asyncio.Event().wait()
+    except asyncio.CancelledError:
+        logger.info("Poller cancelled")
+    finally:
+        # Cleanup
+        await client.stop_polling()
+        await manager.shutdown()
+        await redis_client.aclose()
+        await broker.stop()
+        await database_connection(close=True)
 
 
 if __name__ == "__main__":

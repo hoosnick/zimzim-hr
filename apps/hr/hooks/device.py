@@ -70,8 +70,6 @@ class DeviceHook(BaseHikHook):
                 status_code=500,
                 detail="Failed to add device to HikVision: %s" % e,
             )
-        finally:
-            await self._close_client()
 
     async def pre_patch(self, row_id: str, values: dict) -> dict:
         """
@@ -141,8 +139,6 @@ class DeviceHook(BaseHikHook):
                 status_code=500,
                 detail="Failed to update device in HikVision: %s" % e,
             )
-        finally:
-            await self._close_client()
 
     async def pre_delete(self, row_id: str) -> None:
         """
@@ -165,8 +161,6 @@ class DeviceHook(BaseHikHook):
                 status_code=500,
                 detail="Failed to delete device from HikVision: %s" % e,
             )
-        finally:
-            await self._close_client()
 
 
 # Create singleton instance

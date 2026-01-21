@@ -4,33 +4,26 @@ from loguru import logger
 from piccolo.table import Table
 
 from apps.hik.client import HikClient
-from core.config import settings
+from apps.hik.client_manager import get_hik_client_manager
 
 
 class BaseHikHook(ABC):
     """
     Base abstract class for HikVision API hooks.
     All CRUD operations first call the HikVision API, then proceed to database operations.
+
+    Uses shared HikClient instance via HikClientManager for better performance
+    and resource management.
     """
 
     def __init__(self):
-        self._client: HikClient | None = None
+        # No longer storing client instance - using shared manager
+        pass
 
     async def _get_client(self) -> HikClient:
-        """Get or create HikClient instance"""
-        if self._client is None:
-            self._client = HikClient(
-                app_key=settings.HIK.APP_KEY,
-                secret_key=settings.HIK.SECRET_KEY,
-            )
-            await self._client.open()
-        return self._client
-
-    async def _close_client(self) -> None:
-        """Close HikClient instance"""
-        if self._client is not None:
-            await self._client.close()
-            self._client = None
+        """Get shared HikClient instance from manager"""
+        manager = await get_hik_client_manager()
+        return await manager.get_client()
 
     @abstractmethod
     async def pre_save(self, row: Table) -> Table:

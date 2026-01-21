@@ -158,8 +158,6 @@ class HikClient:
                     "expire_time": self._token_expire_time,
                     "user_id": self._user_id,
                 }
-                with open("test_out/last_auth.json", "w", encoding="utf-8") as f:
-                    f.write(response.text)
             except httpx.HTTPStatusError as e:
                 raise AuthenticationError(f"HTTP error during authentication: {e}")
             except httpx.RequestError as e:
@@ -213,10 +211,6 @@ class HikClient:
                 response.raise_for_status()
 
                 result = deserialize_json(response.content)
-
-                # DEBUG: Save last response to file
-                with open("test_out/last_response.json", "w", encoding="utf-8") as f:
-                    f.write(response.text)
 
                 if result.get("errorCode") == "0":
                     return result

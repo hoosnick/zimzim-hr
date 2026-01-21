@@ -107,8 +107,6 @@ class PersonHook(BaseHikHook):
                 status_code=500,
                 detail="Failed to add person to HikVision: %s" % str(e),
             )
-        finally:
-            await self._close_client()
 
     async def pre_patch(self, row_id: str, values: dict) -> dict:
         """
@@ -256,8 +254,6 @@ class PersonHook(BaseHikHook):
                 status_code=500,
                 detail="Failed to update person in HikVision: %s" % str(e),
             )
-        finally:
-            await self._close_client()
 
     async def pre_delete(self, row_id: str) -> None:
         """
@@ -280,8 +276,6 @@ class PersonHook(BaseHikHook):
                 status_code=500,
                 detail="Failed to delete person from HikVision: %s" % str(e),
             )
-        finally:
-            await self._close_client()
 
 
 # Create singleton instance

@@ -22,6 +22,10 @@ from .exceptions import APIError, AuthenticationError, NetworkError
 from .models.auth import TokenRequest, TokenResponse
 from .models.message import MessageBatch, MessageSubscription
 from .models.person import (
+    CardCollectionRequest,
+    CardCollectionResponse,
+    FingerprintCollectionRequest,
+    FingerprintCollectionResponse,
     Person,
     PersonCardsUpdate,
     PersonCardsUpdateResponse,
@@ -826,6 +830,118 @@ class HikClient:
             "/api/hccgw/person/v1/persons/delete",
             data={"personId": person_id},
         )
+
+    async def collect_person_fingerprint(
+        self, device_serial: str
+    ) -> FingerprintCollectionResponse:
+        """
+        Collect fingerprint from a device. This operation may take 10-15 seconds.
+        The device must support fingerprint collection and be added to HCC/HCT.
+
+        Args:
+            device_serial: Serial number of the collection device
+
+        Returns:
+            FingerprintCollectionResponse with fingerprint data and quality (1-100, recommended >80)
+        """
+        if self._client is None:
+            raise RuntimeError("Client not initialized. Call open() first.")
+
+        await self._ensure_token_valid()
+
+        collection_request = FingerprintCollectionRequest(device_serial=device_serial)
+
+        # Use extended timeout for collection operations (30 seconds)
+        url = f"{self.base_url}/api/hccgw/person/v1/persons/fingercollect"
+        headers = {
+            "Content-Type": "application/json",
+            "Token": self._token or "",
+        }
+
+        content = serialize_json(
+            collection_request.model_dump(by_alias=True, exclude_none=True)
+        )
+
+        # Extended timeout for collection operations
+        extended_timeout = httpx.Timeout(30.0, connect=self.timeout.connect)
+
+        try:
+            response = await self._client.post(
+                url, headers=headers, content=content, timeout=extended_timeout
+            )
+            response.raise_for_status()
+            result = deserialize_json(response.content)
+
+            error_code = result.get("errorCode", "")
+            if error_code != "0":
+                error_msg = result.get("message", "Unknown error")
+                raise APIError(
+                    f"Fingerprint collection failed: {error_msg}", error_code
+                )
+
+            return FingerprintCollectionResponse(**result.get("data", {}))
+
+        except httpx.TimeoutException as e:
+            logger.error(f"Fingerprint collection timeout: {e}")
+            raise NetworkError(
+                "Fingerprint collection timed out. Please try again."
+            ) from e
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error during fingerprint collection: {e}")
+            raise NetworkError(f"HTTP error: {e.response.status_code}") from e
+
+    async def collect_person_card(self, device_serial: str) -> CardCollectionResponse:
+        """
+        Collect card information from a device. This operation may take 10-15 seconds.
+        The device must support card collection and be added to HCC/HCT.
+
+        Args:
+            device_serial: Serial number of the collection device
+
+        Returns:
+            CardCollectionResponse with card number
+        """
+        if self._client is None:
+            raise RuntimeError("Client not initialized. Call open() first.")
+
+        await self._ensure_token_valid()
+
+        collection_request = CardCollectionRequest(device_serial=device_serial)
+
+        # Use extended timeout for collection operations (30 seconds)
+        url = f"{self.base_url}/api/hccgw/person/v1/persons/cardcollect"
+        headers = {
+            "Content-Type": "application/json",
+            "Token": self._token or "",
+        }
+
+        content = serialize_json(
+            collection_request.model_dump(by_alias=True, exclude_none=True)
+        )
+
+        # Extended timeout for collection operations
+        extended_timeout = httpx.Timeout(30.0, connect=self.timeout.connect)
+
+        try:
+            response = await self._client.post(
+                url, headers=headers, content=content, timeout=extended_timeout
+            )
+            response.raise_for_status()
+            result = deserialize_json(response.content)
+
+            error_code = result.get("errorCode", "")
+            if error_code != "0":
+                error_msg = result.get("message", "Unknown error")
+                raise APIError(f"Card collection failed: {error_msg}", error_code)
+
+            return CardCollectionResponse(**result.get("data", {}))
+
+        except httpx.TimeoutException as e:
+            logger.error(f"Card collection timeout: {e}")
+            raise NetworkError("Card collection timed out. Please try again.") from e
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error during card collection: {e}")
+            raise NetworkError(f"HTTP error: {e.response.status_code}") from e
 
     # ========== Message APIs ==========
 

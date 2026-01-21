@@ -14,6 +14,7 @@ from starlette.routing import Mount, Route
 from starlette.staticfiles import StaticFiles
 
 from apps.home.endpoints import HomeEndpoint
+from apps.hr.endpoints import router as api_router
 from apps.hr.hooks import area_hook, device_hook, group_hook, person_hook
 from apps.hr.tables import Area, Device, Group, Person
 from apps.utils.hooks import handle_auth_exception, put_not_allowed, validator_superuser
@@ -78,7 +79,6 @@ VALIDATORS = Validators(
     post_single=[validator_superuser],
     delete_all=[validator_superuser],
 )
-
 
 FastAPIWrapper(
     root_url=config.API_V1_STR + "/areas/",
@@ -155,9 +155,9 @@ FastAPIWrapper(
     ),
 )
 
+private_app.include_router(api_router, prefix=config.API_V1_STR)
 
 app.mount("/api/", protected_app)
-
 
 app.add_middleware(
     middleware_class=CORSMiddleware,

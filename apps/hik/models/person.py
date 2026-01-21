@@ -106,9 +106,6 @@ class PersonPinCode(BaseModel):
     pin_code: str = Field(..., alias="pinCode", min_length=4, max_length=8)
 
 
-# Response models for update operations
-
-
 class FingerFailedItem(BaseModel):
     """Failed fingerprint item in update response"""
 
@@ -155,3 +152,30 @@ class PersonCardsUpdateResponse(BaseModel):
     """Response model for update person cards"""
 
     card_failed: CardFailed | None = Field(None, alias="cardFailed")
+
+
+class FingerprintCollectionRequest(BaseModel):
+    """Request model for fingerprint collection"""
+
+    device_serial: str = Field(..., alias="deviceSerial")
+
+
+class FingerprintCollectionResponse(BaseModel):
+    """Response model for fingerprint collection"""
+
+    finger_data: str | None = Field(None, alias="fingerData")
+    finger_quality: int | None = Field(
+        None, alias="fingerQuality"
+    )  # Range: 1-100, recommended > 80
+
+
+class CardCollectionRequest(BaseModel):
+    """Request model for card collection"""
+
+    device_serial: str = Field(..., alias="deviceSerial")
+
+
+class CardCollectionResponse(BaseModel):
+    """Response model for card collection"""
+
+    card_no: str | None = Field(None, alias="cardNo")

@@ -7,13 +7,19 @@ from redis.asyncio import Redis
 from apps.hik.client_manager import get_hik_client_manager
 from apps.hik.models.message import MessageBatch
 from apps.hr.tables import Message
+from apps.utils.logger import setup_logger
 from core.broker import broker
 from core.config import settings
 from core.db import database_connection
 
+# Setup poller-specific logging
+setup_logger("poller")
+
 
 async def handle_event(batch: MessageBatch) -> None:
-    logger.info(f"Received batch {batch.batch_id}, remaining: {batch.remaining_number}")
+    logger.info(
+        "Received batch %s, remaining: %s" % (batch.batch_id, batch.remaining_number)
+    )
 
     message_id = uuid.uuid4()
 
@@ -23,14 +29,14 @@ async def handle_event(batch: MessageBatch) -> None:
         status=Message.Status.pending,
     )
     await message.save()
-    logger.info(f"Saved message {message_id} to database")
+    logger.info("Saved message %s to database" % message_id)
 
     await broker.publish(
         batch.model_dump_json().encode(),
         stream="events",
         headers={"event_id": str(message_id)},
     )
-    logger.info(f"Published message {message_id} to Redis stream")
+    logger.info("Published message %s to Redis stream" % message_id)
 
 
 async def main():

@@ -6,9 +6,13 @@ from faststream import Context, Depends, FastStream
 from loguru import logger
 
 from apps.hr.tables import Message
+from apps.utils.logger import setup_logger
 from core.broker import broker, stream
 from core.config import settings
 from core.db import database_connection
+
+# Setup worker-specific logging
+setup_logger("worker")
 
 app = FastStream(broker, logger=logger)
 
@@ -77,7 +81,7 @@ async def handle_event(
     client: Annotated[httpx.AsyncClient, Depends(get_http_client)],
 ):
     message_id = uuid.UUID(event_id)
-    logger.info(f"Processing message {message_id}")
+    logger.info("Processing message %s" % message_id)
 
     await Message.update(
         {
@@ -114,7 +118,7 @@ async def handle_event(
             logger.error(
                 "Message %s failed with status %d" % (message_id, response.status_code)
             )
-            raise Exception(f"HTTP {response.status_code}")
+            raise Exception("HTTP %d" % response.status_code)
 
     except httpx.ConnectError as e:
         # Network-level failures - mark client as unhealthy
@@ -122,7 +126,7 @@ async def handle_event(
         await Message.update(
             {
                 Message.status: Message.Status.failed,
-                Message.last_error: f"Connection error: {str(e)}",
+                Message.last_error: "Connection error: %s" % str(e),
                 Message.retry_count: Message.retry_count + 1,
             }
         ).where(Message.id == message_id)
@@ -133,7 +137,7 @@ async def handle_event(
         await Message.update(
             {
                 Message.status: Message.Status.failed,
-                Message.last_error: str(e),
+                Message.last_error: "%s" % str(e),
                 Message.retry_count: Message.retry_count + 1,
             }
         ).where(Message.id == message_id)

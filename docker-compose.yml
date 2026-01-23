@@ -1,0 +1,161 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: zim-attendance-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DATABASE__POSTGRES_DB:-zim_attendance_db}
+      POSTGRES_USER: ${DATABASE__POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE__POSTGRES_PASSWORD:-secure_password}
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
+    volumes:
+      # Persistent data storage - THIS ENSURES DATA IS NOT ERASED
+      - postgres_data:/var/lib/postgresql/data
+      # Optional: Custom PostgreSQL config
+      # - ./docker/postgres/postgresql.conf:/etc/postgresql/postgresql.conf
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DATABASE__POSTGRES_USER:-postgres} -d ${DATABASE__POSTGRES_DB:-zim_attendance_db}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - zim-network
+
+  # Redis Message Broker
+  redis:
+    image: redis:7-alpine
+    container_name: zim-attendance-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      # Persistent Redis data
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - zim-network
+
+  # Main FastAPI Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zim-attendance-app
+    restart: unless-stopped
+    command: python run_main.py
+    env_file:
+      - .env
+    environment:
+      DATABASE__POSTGRES_SERVER: postgres
+      DATABASE__POSTGRES_PORT: 5432
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "8000:8000"
+    volumes:
+      # Persistent logs
+      - ./logs:/app/logs
+      # Mount code for development (remove in production)
+      # - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/')",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - zim-network
+
+  # Event Poller Service
+  poller:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zim-attendance-poller
+    restart: unless-stopped
+    command: python run_poller.py
+    env_file:
+      - .env
+    environment:
+      DATABASE__POSTGRES_SERVER: postgres
+      DATABASE__POSTGRES_PORT: 5432
+      REDIS_URL: redis://redis:6379
+    volumes:
+      # Persistent logs
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+    networks:
+      - zim-network
+
+  # Worker Service
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: zim-attendance-worker
+    restart: unless-stopped
+    command: python run_worker.py
+    env_file:
+      - .env
+    environment:
+      DATABASE__POSTGRES_SERVER: postgres
+      DATABASE__POSTGRES_PORT: 5432
+      REDIS_URL: redis://redis:6379
+    volumes:
+      # Persistent logs
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+    networks:
+      - zim-network
+    # Scale workers if needed
+    deploy:
+      replicas: 1
+
+# Named volumes for persistent data
+volumes:
+  postgres_data:
+    driver: local
+    name: zim-attendance-postgres-data
+  redis_data:
+    driver: local
+    name: zim-attendance-redis-data
+
+# Custom network
+networks:
+  zim-network:
+    driver: bridge
+    name: zim-attendance-network

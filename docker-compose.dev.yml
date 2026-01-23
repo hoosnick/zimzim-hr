@@ -1,0 +1,49 @@
+# Development Docker Compose Override
+# Use: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    command: python run_main.py
+    environment:
+      DEBUG: "true"
+      LOGGING__LOG_STD_LEVEL: "DEBUG"
+    volumes:
+      # Hot reload - mount source code
+      - .:/app
+      - /app/.venv
+    ports:
+      - "8000:8000"
+
+  poller:
+    build:
+      target: builder
+    environment:
+      DEBUG: "true"
+      LOGGING__LOG_STD_LEVEL: "DEBUG"
+    volumes:
+      - .:/app
+      - /app/.venv
+
+  worker:
+    build:
+      target: builder
+    environment:
+      DEBUG: "true"
+      LOGGING__LOG_STD_LEVEL: "DEBUG"
+    volumes:
+      - .:/app
+      - /app/.venv
+
+  postgres:
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+
+  redis:
+    ports:
+      - "6379:6379"

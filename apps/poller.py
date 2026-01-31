@@ -8,9 +8,9 @@ from apps.hik.client_manager import get_hik_client_manager
 from apps.hik.models.message import MessageBatch
 from apps.hr.tables import Message
 from apps.utils.logger import setup_logger
-from core.broker import broker
 from core.config import settings
 from core.db import database_connection
+from core.mq.broker import broker
 
 # Setup poller-specific logging
 setup_logger("poller")

@@ -1,3 +1,5 @@
+import json
+import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -12,8 +14,8 @@ from apps.hr.models import (
     FingerprintCollectRequest,
     FingerprintCollectResponse,
 )
-from apps.hr.tables import Area, Device, Group, Person
-from core.config import settings
+from apps.hr.tables import Message
+from core.mq.broker import broker
 
 router = APIRouter()
 
@@ -181,3 +183,71 @@ async def get_token_status():
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get token status: %s" % str(e),
         )
+
+
+@router.post(
+    "/persons/send-fake-event",
+    tags=["Persons"],
+    include_in_schema=False,
+)
+async def send_fake_event(
+    msg_type: str,
+    device_id: str,
+    occur_time: str,
+    person_id: str,
+    attendance_status: int,
+    auth_result: int,
+):
+    """
+    Send a fake attendance event for testing purposes.
+    This endpoint is for internal testing only and is not exposed in the public API schema.
+    """
+
+    message_id = uuid.uuid4()
+
+    PAYLOAD = {
+        "event": [
+            {
+                "basicInfo": {
+                    "msgType": msg_type,
+                    "device": {
+                        "id": device_id,
+                    },
+                },
+                "data": {
+                    "openDoorInfo": {
+                        "event": {
+                            "basicInfo": {
+                                "occurTime": occur_time,
+                            },
+                            "intelliInfo": {
+                                "personId": person_id,
+                                "attendanceStatus": attendance_status,
+                                "authResult": auth_result,
+                            },
+                        }
+                    }
+                },
+            }
+        ]
+    }
+
+    message = Message(
+        id=message_id,
+        payload=PAYLOAD,
+        status=Message.Status.pending,
+    )
+    await message.save()
+
+    await broker.publish(
+        message=json.dumps(PAYLOAD).encode(),
+        stream="events",
+        headers={"event_id": str(message_id)},
+    )
+
+    return JSONResponse(
+        content={
+            "message": "Fake event sent successfully",
+            "message_id": str(message_id),
+        }
+    )

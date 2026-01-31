@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Final, Literal
+from typing import Final
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, PostgresDsn, computed_field
@@ -105,10 +105,12 @@ class Settings(BaseSettings):
     WEB_APP_URL: str = "https://hr.zim-zim.uz"
 
     API_V1_STR: str = "/v1"
+    ENABLE_FULL_API: bool = False
 
     REDIS_URL: str = "redis://localhost:6379"
 
     HTTP_WEBHOOK_URL: str = "http://example.com/webhook"
+    HTTP_WEBHOOK_TOKEN: str = "supersecrettoken"
 
     # Hikvision Configuration
     HIK: HikvisionConfig = HikvisionConfig()

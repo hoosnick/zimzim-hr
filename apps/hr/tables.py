@@ -108,6 +108,7 @@ class Message(UpdatesMixin, Table):
         processing = "processing"
         failed = "failed"
         done = "done"
+        not_needed = "not_needed"
 
     id = UUID(
         unique=True,

@@ -5,8 +5,8 @@ import uuid
 from loguru import logger
 
 from apps.hr.tables import Message
-from core.broker import broker
 from core.db import database_connection
+from core.mq.broker import broker
 
 payload = {
     "batch_id": "7a75e3ea63415feb39c9a3d6e766fa5cc188663fc0ac8df54a35c92e4ca2b595946580da1c096dc96dc5cedc4612a48c",
